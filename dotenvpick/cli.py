@@ -59,10 +59,14 @@ def main() -> None:
 
     arguments = parser.parse_args()
     if arguments.command == "gh-mask":
-        values = json.load(sys.stdin)
+        try:
+            values = json.load(sys.stdin)
+            visible = json.loads(arguments.visible)
+        except json.JSONDecodeError:
+            parser.error("gh-mask requires valid JSON on stdin and in --visible")
         if not isinstance(values, dict):
             parser.error("values must be a JSON object")
-        mask(values, json.loads(arguments.visible), arguments.output)
+        mask(values, visible, arguments.output)
         return
 
     if arguments.command == "check":
