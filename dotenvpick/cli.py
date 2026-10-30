@@ -3,10 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 
 from dotenvpick.check import exist, value
 from dotenvpick.loader import load, prepare
+from dotenvpick.gh_mask import mask
 
 
 def main() -> None:
@@ -29,6 +31,19 @@ def main() -> None:
         default=Path("."),
         help="root directory containing the files; defaults to the current directory",
     )
+    mask_parser = commands.add_parser("gh-mask", help="mask JSON from stdin and write GitHub output")
+    mask_parser.add_argument(
+        "--visible",
+        default="[]",
+        metavar="FIELDS",
+        help="JSON list of non-sensitive SOURCE.KEY fields allowed to remain visible",
+    )
+    mask_parser.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="GitHub output file receiving the grouped values",
+    )
     check_parser = commands.add_parser("check", help="check selected fields in grouped JSON")
     checks = check_parser.add_subparsers(dest="check_command", required=True)
     exist_parser = checks.add_parser("exist", help="check that fields exist and are nonempty")
@@ -43,6 +58,13 @@ def main() -> None:
         command.add_argument("fields", nargs="+", metavar="SOURCE.KEY")
 
     arguments = parser.parse_args()
+    if arguments.command == "gh-mask":
+        values = json.load(sys.stdin)
+        if not isinstance(values, dict):
+            parser.error("values must be a JSON object")
+        mask(values, json.loads(arguments.visible), arguments.output)
+        return
+
     if arguments.command == "check":
         if arguments.env not in os.environ:
             parser.error(f"Environment variable {arguments.env} is not set")
