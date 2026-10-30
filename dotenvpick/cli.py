@@ -36,9 +36,9 @@ def main() -> None:
     for command in (exist_parser, value_parser):
         command.add_argument(
             "--env",
-            default="VALUES",
+            required=True,
             metavar="NAME",
-            help="environment variable containing grouped JSON; defaults to VALUES",
+            help="environment variable containing grouped JSON",
         )
         command.add_argument("fields", nargs="+", metavar="SOURCE.KEY")
 
