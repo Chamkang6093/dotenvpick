@@ -25,5 +25,8 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+dotenvpick = "dotenvpick.cli:main"
+
 [project.urls]
 Repository = "https://github.com/Chamkang6093/dotenvpick"

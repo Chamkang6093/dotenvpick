@@ -28,8 +28,10 @@ jobs:
       - name: Build package
         run: uv build --no-sources
 
-      - name: Check wheel import
-        run: uv run --with dist/*.whl --no-project -- python -I -c "import dotenvpick; print(dotenvpick.__file__)"
+      - name: Check wheel import and CLI
+        run: |
+          uv run --with dist/*.whl --no-project -- python -I -c "import dotenvpick; print(dotenvpick.__file__)"
+          uv run --with dist/*.whl --no-project -- dotenvpick --help
 
       - name: Upload package distributions
         uses: actions/upload-artifact@v4

@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-import argparse
-import json
-import os
 import re
 import subprocess
 from pathlib import Path, PurePosixPath
+from typing import Any
 
 
-def prepare() -> None:
-    """Validate sources and write the requested sparse-checkout paths."""
-    sources = json.loads(os.environ["SOURCES"])
+def prepare(sources: dict[str, Any]) -> list[str]:
+    """Validate sources and return the requested sparse-checkout paths."""
     if not isinstance(sources, dict) or not sources:
         raise SystemExit("sources must be a nonempty JSON object")
 
@@ -34,21 +31,20 @@ def prepare() -> None:
             raise SystemExit(f"Duplicate keys requested for source {name}")
         files.append("/" + str(path))
 
-    with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
-        output.write("files<<ENV_FILES\n" + "\n".join(dict.fromkeys(files)) + "\nENV_FILES\n")
+    return list(dict.fromkeys(files))
 
 
-def load() -> None:
-    """Read the requested keys and write their grouped JSON output."""
-    sources = json.loads(os.environ["SOURCES"])
-    root = Path(".").resolve()
+def load(sources: dict[str, Any], root: Path) -> dict[str, dict[str, str]]:
+    """Read the requested keys and return values grouped by source name."""
+    root = root.resolve()
     values: dict[str, dict[str, str]] = {}
     for name, source in sources.items():
         file = (root / source["file"]).resolve()
         if not file.is_relative_to(root):
             raise SystemExit(f"File must remain inside the root for source {name}")
         lines = subprocess.check_output(
-            ["./env-loader.sh", str(file), *source["keys"]], text=True
+            ["bash", str(Path(__file__).with_name("env-loader.sh")), str(file), *source["keys"]],
+            text=True,
         ).splitlines()
         # Split at the first '=' so values can contain additional '=' characters.
         entries = dict(line.split("=", 1) for line in lines)
@@ -56,21 +52,4 @@ def load() -> None:
             raise SystemExit(f"Unexpected or duplicate variable names in source {name}")
         values[name] = entries
 
-    with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
-        output.write("values=" + json.dumps(values, separators=(",", ":")) + "\n")
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Prepare environment file paths or load their values for GitHub Actions."
-    )
-    parser.add_argument("command", choices=("prepare", "load"))
-    args = parser.parse_args()
-    if args.command == "prepare":
-        prepare()
-    else:
-        load()
-
-
-if __name__ == "__main__":
-    main()
+    return values
